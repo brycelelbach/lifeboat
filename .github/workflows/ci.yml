@@ -1,0 +1,33 @@
+name: CI
+
+# Mirrors ./test.bash — each job installs what it needs and delegates to a
+# single ./test.bash flag, so there is one source of truth for "passing tests".
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (shellcheck + bash -n)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: ./test.bash --lint
+        run: ./test.bash --lint
+
+  unit:
+    name: Unit tests (bats)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+      - name: ./test.bash --unit
+        run: ./test.bash --unit

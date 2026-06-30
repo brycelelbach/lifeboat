@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+#
+# lifeboat — make a compressed tarball of a home directory, keeping the things
+# you can't regenerate (git history, source, docs) and dropping the bulky things
+# you can (build artifacts, profiler dumps, caches, virtualenvs).
+#
+# The name is the idea: when a box is about to go down, you grab the lifeboat —
+# the essential work — and leave the heavy, replaceable cargo behind.
+#
+# Usage:
+#   lifeboat <name> <tag>
+#
+# Produces, in the current directory (or $OUT_DIR):
+#   <name>-<tag>-YYYY-MM-DD-HH-MM-SS.tar.gz
+#
+# Example:
+#   lifeboat myhost eigh
+#   -> myhost-eigh-2026-06-30-14-22-05.tar.gz
+#
+# Environment overrides:
+#   SRC=<dir>      directory to back up           (default: $HOME)
+#   OUT_DIR=<dir>  where to write the archive      (default: current directory)
+#   LEVEL=<0-9>    gzip/pigz compression level     (default: 6)
+#   EXTRA_EXCLUDES extra tar --exclude patterns, newline- or space-separated
+#   DRY_RUN=1      list what WOULD be archived, write nothing
+#
+# Exclusions are pattern-based, never content-based. That is deliberate: a
+# content sniffer (e.g. `file`) classifies empty and one-byte files as
+# "binary", so a backup built on it would silently drop empty __init__.py,
+# .gitkeep, and similar. Patterns can't make that mistake, and every build
+# artifact lives in a predictable place anyway.
+
+set -u -o pipefail
+
+readonly PROG="${0##*/}"
+
+usage() {
+    sed -n '2,40p' "$0" | sed 's/^#\{1,2\} \{0,1\}//; s/^#$//'
+    exit "${1:-0}"
+}
+
+case "${1:-}" in
+    -h | --help) usage 0 ;;
+esac
+
+NAME="${1:-}"
+TAG="${2:-}"
+if [[ -z "$NAME" || -z "$TAG" ]]; then
+    echo "$PROG: need <name> and <tag>" >&2
+    echo "try '$PROG --help'" >&2
+    exit 64
+fi
+
+SRC="${SRC:-$HOME}"
+SRC="${SRC%/}"
+OUT_DIR="${OUT_DIR:-$PWD}"
+LEVEL="${LEVEL:-6}"
+
+[[ -d "$SRC" ]] || {
+    echo "$PROG: SRC '$SRC' is not a directory" >&2
+    exit 1
+}
+
+# Resolve SRC to an absolute, symlink-free path so the self-exclusion check and
+# the tar root are unambiguous.
+SRC="$(cd "$SRC" && pwd -P)"
+PARENT="$(dirname "$SRC")"
+BASE="$(basename "$SRC")"
+
+STAMP="$(date +%Y-%m-%d-%H-%M-%S)"
+ARCHIVE="${NAME}-${TAG}-${STAMP}.tar.gz"
+
+# Pick a compressor: pigz (parallel) if available, else gzip.
+if command -v pigz >/dev/null 2>&1; then
+    COMPRESSOR=(pigz "-${LEVEL}")
+else
+    COMPRESSOR=(gzip "-${LEVEL}")
+fi
+
+# Exclusion patterns. Directory names match at any depth via the leading "*/";
+# tar prunes a matched directory and everything beneath it. Extension patterns
+# match files at any depth.
+EXCLUDES=(
+    # build output
+    --exclude='*/build' --exclude='*/.torch_ext'
+    --exclude='*.o' --exclude='*.a' --exclude='*.so' --exclude='*.so.*'
+    --exclude='*.dylib' --exclude='*.dll' --exclude='*.lib' --exclude='*.obj'
+    --exclude='*.cubin' --exclude='*.fatbin' --exclude='*.ptx'
+    --exclude='*.ninja_deps'
+    # profiler reports / capture dumps
+    --exclude='*/profiles'
+    --exclude='*.nsys-rep' --exclude='*.ncu-rep'
+    --exclude='*.qdrep' --exclude='*.qdstrm'
+    # caches and virtualenvs (regenerable)
+    --exclude='*/.cache' --exclude='*/.triton' --exclude='*/.nv'
+    --exclude='*/__pycache__' --exclude='*.pyc'
+    --exclude='*/.venv*' --exclude='*/node_modules'
+    --exclude='*/.pytest_cache' --exclude='*/.mypy_cache' --exclude='*/.ruff_cache'
+)
+
+# Caller-supplied extra patterns (newline- or whitespace-separated).
+if [[ -n "${EXTRA_EXCLUDES:-}" ]]; then
+    # shellcheck disable=SC2206  # word-splitting is intentional here
+    extra=(${EXTRA_EXCLUDES})
+    for pat in "${extra[@]}"; do
+        EXCLUDES+=(--exclude="$pat")
+    done
+fi
+
+# Dry run: list what would be archived (to stdout) and stop, writing nothing.
+if [[ -n "${DRY_RUN:-}" ]]; then
+    echo "$PROG: DRY RUN — listing members of $SRC (nothing written)" >&2
+    tar -cv "${EXCLUDES[@]}" --warning=no-file-changed \
+        -C "$PARENT" "$BASE" -f /dev/null
+    exit $?
+fi
+
+mkdir -p "$OUT_DIR" || exit 1
+OUT_DIR="$(cd "$OUT_DIR" && pwd -P)"
+OUT="${OUT_DIR}/${ARCHIVE}"
+
+# Never archive the output file itself. We exclude by basename, and — when the
+# archive is being written inside SRC — also by its path relative to the tar
+# root, since a piped tar (writing to stdout) cannot auto-detect its own output
+# the way `tar -cf FILE` does.
+EXCLUDES+=(--exclude="$ARCHIVE")
+case "$OUT/" in
+    "$SRC"/*) EXCLUDES+=(--exclude="${OUT#"$PARENT"/}") ;;
+esac
+
+echo "Backing up : $SRC"
+echo "Writing    : $OUT"
+echo "Compressor : ${COMPRESSOR[*]}"
+echo
+
+# tar exit 1 means "some files changed/vanished as they were read" — expected
+# for a live home directory and not a failure. tar exit >= 2 is a real error.
+tar -cf - "${EXCLUDES[@]}" --warning=no-file-changed \
+    -C "$PARENT" "$BASE" | "${COMPRESSOR[@]}" >"$OUT"
+# Capture the whole PIPESTATUS array in one shot: under `set -u`, referencing a
+# single element on its own line can trip "unbound variable".
+rc=("${PIPESTATUS[@]}")
+tar_rc=${rc[0]}
+zip_rc=${rc[1]}
+
+if [[ "$zip_rc" -ne 0 ]]; then
+    echo "$PROG: compressor failed (exit $zip_rc)" >&2
+    exit 1
+fi
+if [[ "$tar_rc" -gt 1 ]]; then
+    echo "$PROG: tar failed (exit $tar_rc)" >&2
+    exit 1
+fi
+if [[ "$tar_rc" -eq 1 ]]; then
+    echo "note: some files changed while reading (expected for a live home dir)"
+fi
+
+echo
+echo "Done: $OUT"
+if command -v du >/dev/null 2>&1; then
+    echo "Size: $(du -h "$OUT" | cut -f1)"
+fi
