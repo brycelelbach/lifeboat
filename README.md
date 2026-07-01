@@ -46,6 +46,7 @@ source inside git worktrees.
 | Profiler reports | `profiles/`, `*.nsys-rep *.ncu-rep *.qdrep *.qdstrm` |
 | Caches | `.cache/ .triton/ .nv/ __pycache__/ *.pyc`, `.pytest_cache/ .mypy_cache/ .ruff_cache/` |
 | Virtualenvs / deps | `.venv*/`, `node_modules/` |
+| Archives | `*.tar.gz *.tgz *.tar` (a lifeboat is the source, not other backups — keeps a prior run's archive from being swallowed into the next) |
 
 Exclusions are **pattern-based, never content-based**. That is deliberate: a
 content sniffer such as `file` reports empty and one-byte files as "binary", so

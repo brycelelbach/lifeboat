@@ -96,6 +96,10 @@ EXCLUDES=(
     --exclude='*/__pycache__' --exclude='*.pyc'
     --exclude='*/.venv*' --exclude='*/node_modules'
     --exclude='*/.pytest_cache' --exclude='*/.mypy_cache' --exclude='*/.ruff_cache'
+    # archives — a lifeboat is the source, not other tarballs. Skipping these
+    # keeps a prior run's archive (or any bulky backup) from being swallowed
+    # into the next one; the current run's own output is excluded separately below.
+    --exclude='*.tar.gz' --exclude='*.tgz' --exclude='*.tar'
 )
 
 # Caller-supplied extra patterns (newline- or whitespace-separated).

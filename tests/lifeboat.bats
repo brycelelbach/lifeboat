@@ -143,6 +143,23 @@ archive_files() {
     [[ "$output" == *"proj/src/real.py"* ]]
 }
 
+@test "drops archives (.tar.gz/.tgz/.tar) so a prior backup isn't swallowed" {
+    mkdir -p "$SRC/proj/src"
+    echo x >"$SRC/host-tag-2026-01-01-00-00-00.tar.gz"
+    echo x >"$SRC/proj/old-backup.tgz"
+    echo x >"$SRC/proj/bundle.tar"
+    echo x >"$SRC/proj/src/real.py"
+
+    run env SRC="$SRC" "$LIFEBOAT" host tag
+    [ "$status" -eq 0 ]
+
+    run archive_files
+    [[ "$output" != *".tar.gz"* ]]
+    [[ "$output" != *".tgz"* ]]
+    [[ "$output" != *".tar"* ]]
+    [[ "$output" == *"proj/src/real.py"* ]]
+}
+
 @test "keeps worktree source but drops worktree build output" {
     mkdir -p "$SRC/wt/w1/src" "$SRC/wt/w1/build" "$SRC/wt/w1/.torch_ext"
     echo src >"$SRC/wt/w1/src/k.cu"
