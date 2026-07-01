@@ -43,7 +43,7 @@ source inside git worktrees.
 | Category | Patterns |
 | --- | --- |
 | Build output | `build/`, `.torch_ext/`, `*.o *.a *.so *.dylib *.dll *.cubin *.fatbin *.ptx`, `*.ninja_deps` |
-| Profiler reports | `profiles/`, `*.nsys-rep *.ncu-rep *.qdrep *.qdstrm` |
+| Profiler captures | `*.nsys-rep *.ncu-rep *.qdrep *.qdstrm *.sqlite` (bulky binary dumps only — the text summaries next to them under `profiles/` are kept) |
 | Caches | `.cache/ .triton/ .nv/ __pycache__/ *.pyc`, `.pytest_cache/ .mypy_cache/ .ruff_cache/` |
 | Virtualenvs / deps | `.venv*/`, `node_modules/` |
 | Archives | `*.tar.gz *.tgz *.tar` (a lifeboat is the source, not other backups — keeps a prior run's archive from being swallowed into the next) |
