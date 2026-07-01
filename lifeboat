@@ -87,10 +87,12 @@ EXCLUDES=(
     --exclude='*.dylib' --exclude='*.dll' --exclude='*.lib' --exclude='*.obj'
     --exclude='*.cubin' --exclude='*.fatbin' --exclude='*.ptx'
     --exclude='*.ninja_deps'
-    # profiler reports / capture dumps
-    --exclude='*/profiles'
+    # profiler capture dumps — drop the bulky binary captures by EXTENSION, not
+    # the whole profiles/ directory: that dir also holds the hand-written run
+    # summaries and text measurement dumps (*.md, *.ncu-txt, *.csv, …) that are
+    # exactly the kind of non-regenerable notes a lifeboat exists to keep.
     --exclude='*.nsys-rep' --exclude='*.ncu-rep'
-    --exclude='*.qdrep' --exclude='*.qdstrm'
+    --exclude='*.qdrep' --exclude='*.qdstrm' --exclude='*.sqlite'
     # caches and virtualenvs (regenerable)
     --exclude='*/.cache' --exclude='*/.triton' --exclude='*/.nv'
     --exclude='*/__pycache__' --exclude='*.pyc'

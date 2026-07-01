@@ -115,12 +115,11 @@ archive_files() {
     [[ "$output" == *"a/b/c/keep.cpp"* ]]
 }
 
-@test "drops build/, profiles/, caches, and virtualenvs by directory" {
-    mkdir -p "$SRC/proj/build" "$SRC/proj/profiles" "$SRC/proj/.cache" \
+@test "drops build/, caches, and virtualenvs by directory" {
+    mkdir -p "$SRC/proj/build" "$SRC/proj/.cache" \
              "$SRC/proj/.venv/lib" "$SRC/proj/__pycache__" \
              "$SRC/proj/node_modules" "$SRC/proj/.triton" "$SRC/proj/src"
     echo x >"$SRC/proj/build/out.bin"
-    echo x >"$SRC/proj/profiles/run.nsys-rep"
     echo x >"$SRC/proj/.cache/blob"
     echo x >"$SRC/proj/.venv/lib/pkg.py"
     echo x >"$SRC/proj/__pycache__/m.pyc"
@@ -133,7 +132,6 @@ archive_files() {
 
     run archive_files
     [[ "$output" != *"/build/"* ]]
-    [[ "$output" != *"/profiles/"* ]]
     [[ "$output" != *"/.cache/"* ]]
     [[ "$output" != *"/.venv/"* ]]
     [[ "$output" != *"/__pycache__/"* ]]
@@ -141,6 +139,33 @@ archive_files() {
     [[ "$output" != *"/.triton/"* ]]
     # the real source next to all that junk survives
     [[ "$output" == *"proj/src/real.py"* ]]
+}
+
+@test "drops binary profiler captures but KEEPS text summaries in profiles/" {
+    mkdir -p "$SRC/proj/profiles/run1"
+    # bulky binary captures — dropped by extension
+    echo x >"$SRC/proj/profiles/run1/trace.nsys-rep"
+    echo x >"$SRC/proj/profiles/run1/kernel.ncu-rep"
+    echo x >"$SRC/proj/profiles/run1/trace.sqlite"
+    # hand-written / text measurement artifacts next to them — KEPT
+    echo note >"$SRC/proj/profiles/run1/CAPSTONE-SUMMARY.md"
+    echo cols >"$SRC/proj/profiles/run1/kernel.ncu-txt"
+    echo cols >"$SRC/proj/profiles/run1/timeline.nsys-txt"
+    echo a,b  >"$SRC/proj/profiles/run1/metrics.csv"
+
+    run env SRC="$SRC" "$LIFEBOAT" host tag
+    [ "$status" -eq 0 ]
+
+    run archive_files
+    # bulky binaries gone
+    [[ "$output" != *".nsys-rep"* ]]
+    [[ "$output" != *".ncu-rep"* ]]
+    [[ "$output" != *".sqlite"* ]]
+    # non-regenerable text survives — this is the whole point
+    [[ "$output" == *"profiles/run1/CAPSTONE-SUMMARY.md"* ]]
+    [[ "$output" == *"profiles/run1/kernel.ncu-txt"* ]]
+    [[ "$output" == *"profiles/run1/timeline.nsys-txt"* ]]
+    [[ "$output" == *"profiles/run1/metrics.csv"* ]]
 }
 
 @test "drops archives (.tar.gz/.tgz/.tar) so a prior backup isn't swallowed" {
