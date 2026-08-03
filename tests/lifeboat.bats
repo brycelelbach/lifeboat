@@ -168,6 +168,42 @@ archive_files() {
     [[ "$output" == *"profiles/run1/metrics.csv"* ]]
 }
 
+@test "drops installed toolchains, package stores, and duplicate pane capture" {
+    mkdir -p "$SRC/.rustup/toolchains/stable/bin" \
+             "$SRC/.cargo/registry/cache" "$SRC/.npm/_cacache/content" \
+             "$SRC/.codex/packages/standalone/bin" \
+             "$SRC/.local/share/aab/node/bin" "$SRC/.local/share/claude/versions" \
+             "$SRC/.local/share/uv/python/bin" "$SRC/.local/bin" \
+             "$SRC/breval-run" "$SRC/.codex/sessions" "$SRC/project/.git/objects/pack"
+    printf x >"$SRC/.rustup/toolchains/stable/bin/rustc"
+    printf x >"$SRC/.cargo/registry/cache/crate"
+    printf x >"$SRC/.npm/_cacache/content/blob"
+    printf x >"$SRC/.codex/packages/standalone/bin/codex"
+    printf x >"$SRC/.local/share/aab/node/bin/node"
+    printf x >"$SRC/.local/share/claude/versions/claude"
+    printf x >"$SRC/.local/share/uv/python/bin/python"
+    printf x >"$SRC/.local/bin/tool"
+    printf x >"$SRC/breval-run/harness-pane.raw"
+    printf session >"$SRC/.codex/sessions/run.jsonl"
+    printf history >"$SRC/project/.git/objects/pack/run.pack"
+
+    run env SRC="$SRC" "$LIFEBOAT" host tag
+    [ "$status" -eq 0 ]
+
+    run archive_files
+    [[ "$output" != *"/.rustup/toolchains/"* ]]
+    [[ "$output" != *"/.cargo/registry/"* ]]
+    [[ "$output" != *"/.npm/_cacache/"* ]]
+    [[ "$output" != *"/.codex/packages/"* ]]
+    [[ "$output" != *"/.local/share/aab/"* ]]
+    [[ "$output" != *"/.local/share/claude/"* ]]
+    [[ "$output" != *"/.local/share/uv/"* ]]
+    [[ "$output" != *"/.local/bin/"* ]]
+    [[ "$output" != *"/breval-run/harness-pane.raw"* ]]
+    [[ "$output" == *"/.codex/sessions/run.jsonl"* ]]
+    [[ "$output" == *"/project/.git/objects/pack/run.pack"* ]]
+}
+
 @test "drops archives (.tar.gz/.tgz/.tar) so a prior backup isn't swallowed" {
     mkdir -p "$SRC/proj/src"
     echo x >"$SRC/host-tag-2026-01-01-00-00-00.tar.gz"
