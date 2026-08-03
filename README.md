@@ -46,6 +46,8 @@ source inside git worktrees.
 | Profiler captures | `*.nsys-rep *.ncu-rep *.qdrep *.qdstrm *.sqlite` (bulky binary dumps only — the text summaries next to them under `profiles/` are kept) |
 | Caches | `.cache/ .triton/ .nv/ __pycache__/ *.pyc`, `.pytest_cache/ .mypy_cache/ .ruff_cache/` |
 | Virtualenvs / deps | `.venv*/`, `node_modules/` |
+| Installed tools | `.rustup/toolchains/`, `.cargo/registry/`, `.npm/_cacache/`, `.codex/packages/`, `.local/bin/`, `.local/share/{aab,claude,uv}/` |
+| Duplicate captures | `breval-run/harness-pane.raw` |
 | Archives | `*.tar.gz *.tgz *.tar` (a lifeboat is the source, not other backups — keeps a prior run's archive from being swallowed into the next) |
 
 Exclusions are **pattern-based, never content-based**. That is deliberate: a
