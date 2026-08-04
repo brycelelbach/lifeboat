@@ -204,6 +204,35 @@ archive_files() {
     [[ "$output" == *"/project/.git/objects/pack/run.pack"* ]]
 }
 
+@test "drops generated compiler state and duplicate KernelBench output" {
+    mkdir -p "$SRC/project/src" "$SRC/project/target/debug" \
+             "$SRC/project/.scratch/toolchain" "$SRC/.codex/.tmp/plugins" \
+             "$SRC/.cargo/cuda-oxide/src" "$SRC/.pi/agent/git/repo" \
+             "$SRC/kernelbench-hard-eval/outputs/runs/run" \
+             "$SRC/breval-run/kernelbench-result"
+    printf source >"$SRC/project/src/kernel.rs"
+    printf object >"$SRC/project/target/debug/kernel.o"
+    printf scratch >"$SRC/project/.scratch/toolchain/rustc"
+    printf plugin >"$SRC/.codex/.tmp/plugins/plugin"
+    printf clone >"$SRC/.cargo/cuda-oxide/src/lib.rs"
+    printf clone >"$SRC/.pi/agent/git/repo/file"
+    printf duplicate >"$SRC/kernelbench-hard-eval/outputs/runs/run/result.json"
+    printf result >"$SRC/breval-run/kernelbench-result/result.json"
+
+    run env SRC="$SRC" "$LIFEBOAT" host tag
+    [ "$status" -eq 0 ]
+
+    run archive_files
+    [[ "$output" == *"/project/src/kernel.rs"* ]]
+    [[ "$output" == *"/breval-run/kernelbench-result/result.json"* ]]
+    [[ "$output" != *"/target/"* ]]
+    [[ "$output" != *"/.scratch/"* ]]
+    [[ "$output" != *"/.codex/.tmp/"* ]]
+    [[ "$output" != *"/.cargo/cuda-oxide/"* ]]
+    [[ "$output" != *"/.pi/agent/git/"* ]]
+    [[ "$output" != *"/kernelbench-hard-eval/outputs/"* ]]
+}
+
 @test "drops archives (.tar.gz/.tgz/.tar) so a prior backup isn't swallowed" {
     mkdir -p "$SRC/proj/src"
     echo x >"$SRC/host-tag-2026-01-01-00-00-00.tar.gz"
