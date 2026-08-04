@@ -98,16 +98,22 @@ EXCLUDES=(
     --exclude='*/__pycache__' --exclude='*.pyc'
     --exclude='*/.venv*' --exclude='*/node_modules'
     --exclude='*/.pytest_cache' --exclude='*/.mypy_cache' --exclude='*/.ruff_cache'
+    --exclude='*/.scratch' --exclude='*/target'
+    --exclude='*/.codex/.tmp'
     # installed toolchains and package stores (regenerable)
     --exclude='*/.rustup/toolchains' --exclude='*/.cargo/registry'
+    --exclude='*/.cargo/cuda-oxide'
     --exclude='*/.npm/_cacache'
     --exclude='*/.codex/packages'
     --exclude='*/.local/share/aab' --exclude='*/.local/share/claude'
     --exclude='*/.local/share/uv'
+    --exclude='*/.pi/agent/git'
     # installed command payloads; configuration and session data live elsewhere
     --exclude='*/.local/bin'
     # harness-pane.raw duplicates the native session logs and can grow large
     --exclude='*/breval-run/harness-pane.raw'
+    # KernelBench stages a second copy of the canonical breval-run result.
+    --exclude='*/kernelbench-hard-eval/outputs'
     # archives — a lifeboat is the source, not other tarballs. Skipping these
     # keeps a prior run's archive (or any bulky backup) from being swallowed
     # into the next one; the current run's own output is excluded separately below.

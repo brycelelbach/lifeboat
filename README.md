@@ -42,11 +42,12 @@ source inside git worktrees.
 
 | Category | Patterns |
 | --- | --- |
-| Build output | `build/`, `.torch_ext/`, `*.o *.a *.so *.dylib *.dll *.cubin *.fatbin *.ptx`, `*.ninja_deps` |
+| Build output | `build/`, `target/`, `.scratch/`, `.torch_ext/`, `*.o *.a *.so *.dylib *.dll *.cubin *.fatbin *.ptx`, `*.ninja_deps` |
 | Profiler captures | `*.nsys-rep *.ncu-rep *.qdrep *.qdstrm *.sqlite` (bulky binary dumps only — the text summaries next to them under `profiles/` are kept) |
 | Caches | `.cache/ .triton/ .nv/ __pycache__/ *.pyc`, `.pytest_cache/ .mypy_cache/ .ruff_cache/` |
 | Virtualenvs / deps | `.venv*/`, `node_modules/` |
-| Installed tools | `.rustup/toolchains/`, `.cargo/registry/`, `.npm/_cacache/`, `.codex/packages/`, `.local/bin/`, `.local/share/{aab,claude,uv}/` |
+| Installed tools | `.rustup/toolchains/`, `.cargo/{registry,cuda-oxide}/`, `.npm/_cacache/`, `.codex/{packages,.tmp}/`, `.pi/agent/git/`, `.local/bin/`, `.local/share/{aab,claude,uv}/` |
+| Duplicate results | `kernelbench-hard-eval/outputs/` (the canonical result remains under `breval-run/kernelbench-result/`) |
 | Duplicate captures | `breval-run/harness-pane.raw` |
 | Archives | `*.tar.gz *.tgz *.tar` (a lifeboat is the source, not other backups — keeps a prior run's archive from being swallowed into the next) |
 
