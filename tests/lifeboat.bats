@@ -115,6 +115,50 @@ archive_files() {
     [[ "$output" == *"a/b/c/keep.cpp"* ]]
 }
 
+@test "drops Rust compiler artifacts and renamed compilation caches" {
+    mkdir -p "$SRC/project/cargo-target/debug/incremental/crate/hash" \
+             "$SRC/project/custom-build/debug/deps"
+    printf source >"$SRC/project/kernel.rs"
+    printf library >"$SRC/project/custom-build/debug/deps/libkernel.rlib"
+    printf metadata >"$SRC/project/custom-build/debug/deps/libkernel.rmeta"
+    printf graph >"$SRC/project/cargo-target/debug/incremental/crate/hash/dep-graph.bin"
+
+    run env SRC="$SRC" "$LIFEBOAT" host tag
+    [ "$status" -eq 0 ]
+
+    run archive_files
+    [[ "$output" == *"/project/kernel.rs"* ]]
+    [[ "$output" != *".rlib"* ]]
+    [[ "$output" != *".rmeta"* ]]
+    [[ "$output" != *"/cargo-target/"* ]]
+    [[ "$output" != *"/incremental/"* ]]
+}
+
+@test "drops embedded Rust and CUDA toolchains" {
+    mkdir -p "$SRC/run/scratch_toolchain/cuda-root/bin" \
+             "$SRC/run/.cutile-toolchain/rustup/toolchains/stable/bin" \
+             "$SRC/run/vendor/rustup/toolchains/stable/bin" \
+             "$SRC/run/vendor/cargo/registry/cache" \
+             "$SRC/run/vendor/cuda-root/bin"
+    printf source >"$SRC/run/solution.py"
+    printf compiler >"$SRC/run/scratch_toolchain/cuda-root/bin/nvcc"
+    printf compiler >"$SRC/run/.cutile-toolchain/rustup/toolchains/stable/bin/rustc"
+    printf compiler >"$SRC/run/vendor/rustup/toolchains/stable/bin/rustc"
+    printf package >"$SRC/run/vendor/cargo/registry/cache/crate"
+    printf compiler >"$SRC/run/vendor/cuda-root/bin/nvcc"
+
+    run env SRC="$SRC" "$LIFEBOAT" host tag
+    [ "$status" -eq 0 ]
+
+    run archive_files
+    [[ "$output" == *"/run/solution.py"* ]]
+    [[ "$output" != *"/scratch_toolchain/"* ]]
+    [[ "$output" != *"/.cutile-toolchain/"* ]]
+    [[ "$output" != *"/rustup/toolchains/"* ]]
+    [[ "$output" != *"/cargo/registry/"* ]]
+    [[ "$output" != *"/cuda-root/"* ]]
+}
+
 @test "drops build/, caches, and virtualenvs by directory" {
     mkdir -p "$SRC/proj/build" "$SRC/proj/.cache" \
              "$SRC/proj/.venv/lib" "$SRC/proj/__pycache__" \
