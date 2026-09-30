@@ -10,26 +10,39 @@ the essential work — and leave the heavy, replaceable cargo behind.
 ## Usage
 
 ```sh
-lifeboat <name> <tag>
+lifeboat <name>
 ```
 
 Produces, in the current directory:
 
 ```
-<name>-<tag>-YYYY-MM-DD-HH-MM-SS.tar.gz
+lifeboat-<name>-YYYY-MM-DD-HH-MM-SS.tar.gz
 ```
+
+`<name>` may contain hyphens but not `/`.
 
 Example:
 
 ```sh
-$ lifeboat myhost eigh
+$ lifeboat myhost-eigh
 Backing up : /home/me
-Writing    : /home/me/myhost-eigh-2026-06-30-14-22-05.tar.gz
+Writing    : /home/me/lifeboat-myhost-eigh-2026-06-30-14-22-05.tar.gz
 Compressor : pigz -6
 
-Done: /home/me/myhost-eigh-2026-06-30-14-22-05.tar.gz
+Done: /home/me/lifeboat-myhost-eigh-2026-06-30-14-22-05.tar.gz
 Size: 20G
 ```
+
+For a Brev environment, use the name
+`brev-<env-name>-<env-8char-id>`, where `<env-8char-id>` is the first eight
+characters of the environment ID. For example:
+
+```sh
+lifeboat brev-training-cluster-a1b2c3d4
+```
+
+This produces an archive named like
+`lifeboat-brev-training-cluster-a1b2c3d4-2026-06-30-14-22-05.tar.gz`.
 
 Uses `pigz` for parallel compression when available, otherwise `gzip`.
 
@@ -74,10 +87,10 @@ Set via environment variables:
 
 ```sh
 # smaller archive: also drop images and PDFs
-EXTRA_EXCLUDES='*.png *.pdf' lifeboat myhost eigh
+EXTRA_EXCLUDES='*.png *.pdf' lifeboat myhost-eigh
 
 # see what would be included, write nothing
-DRY_RUN=1 lifeboat myhost eigh
+DRY_RUN=1 lifeboat myhost-eigh
 ```
 
 ## Notes

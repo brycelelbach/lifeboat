@@ -28,36 +28,46 @@ archive_files() {
 
 # --- argument handling -----------------------------------------------------
 
-@test "fails without name and tag" {
+@test "fails without a name" {
     run env SRC="$SRC" "$LIFEBOAT"
     [ "$status" -eq 64 ]
 }
 
-@test "fails with only a name" {
-    run env SRC="$SRC" "$LIFEBOAT" onlyname
+@test "rejects a legacy separate name and tag" {
+    run env SRC="$SRC" "$LIFEBOAT" myhost eigh
     [ "$status" -eq 64 ]
+    [[ "$output" == *"need exactly one <name>"* ]]
+}
+
+@test "rejects names containing a path separator" {
+    run env SRC="$SRC" "$LIFEBOAT" brev/env
+    [ "$status" -eq 64 ]
+    [[ "$output" == *"<name> must not contain '/'"* ]]
 }
 
 @test "--help prints usage and exits 0" {
     run "$LIFEBOAT" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Usage:"* ]]
+    [[ "$output" == *"lifeboat <name>"* ]]
+    [[ "$output" == *"brev-<env-name>-<env-8char-id>"* ]]
+    [[ "$output" != *"<tag>"* ]]
+    [[ "$output" != *"set -u"* ]]
 }
 
 @test "fails when SRC is not a directory" {
-    run env SRC="$SRC/does-not-exist" "$LIFEBOAT" host tag
+    run env SRC="$SRC/does-not-exist" "$LIFEBOAT" host
     [ "$status" -eq 1 ]
 }
 
 # --- archive naming --------------------------------------------------------
 
-@test "archive is named <name>-<tag>-YYYY-MM-DD-HH-MM-SS.tar.gz" {
+@test "archive is named lifeboat-<name>-YYYY-MM-DD-HH-MM-SS.tar.gz" {
     echo hi >"$SRC/file.txt"
-    run env SRC="$SRC" "$LIFEBOAT" myhost eigh
+    run env SRC="$SRC" "$LIFEBOAT" myhost-eigh
     [ "$status" -eq 0 ]
     local tgz
     tgz="$(basename "$(find "$OUT" -name '*.tar.gz')")"
-    [[ "$tgz" =~ ^myhost-eigh-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}\.tar\.gz$ ]]
+    [[ "$tgz" =~ ^lifeboat-myhost-eigh-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}\.tar\.gz$ ]]
 }
 
 # --- keep real content -----------------------------------------------------
@@ -70,7 +80,7 @@ archive_files() {
     echo 'doc'          >"$SRC/repo/README.md"
     echo 'packdata'     >"$SRC/repo/.git/objects/pack/p.pack"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -86,7 +96,7 @@ archive_files() {
     : >"$SRC/pkg/__init__.py"
     : >"$SRC/.gitkeep"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -104,7 +114,7 @@ archive_files() {
     echo x >"$SRC/a/b/c/mod.ptx"
     echo x >"$SRC/a/b/c/keep.cpp"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -123,7 +133,7 @@ archive_files() {
     printf metadata >"$SRC/project/custom-build/debug/deps/libkernel.rmeta"
     printf graph >"$SRC/project/cargo-target/debug/incremental/crate/hash/dep-graph.bin"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -147,7 +157,7 @@ archive_files() {
     printf package >"$SRC/run/vendor/cargo/registry/cache/crate"
     printf compiler >"$SRC/run/vendor/cuda-root/bin/nvcc"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -171,7 +181,7 @@ archive_files() {
     echo x >"$SRC/proj/.triton/kernel.bin"
     echo x >"$SRC/proj/src/real.py"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -197,7 +207,7 @@ archive_files() {
     echo cols >"$SRC/proj/profiles/run1/timeline.nsys-txt"
     echo a,b  >"$SRC/proj/profiles/run1/metrics.csv"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -231,7 +241,7 @@ archive_files() {
     printf session >"$SRC/.codex/sessions/run.jsonl"
     printf history >"$SRC/project/.git/objects/pack/run.pack"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -263,7 +273,7 @@ archive_files() {
     printf duplicate >"$SRC/kernelbench-hard-eval/outputs/runs/run/result.json"
     printf result >"$SRC/breval-run/kernelbench-result/result.json"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -279,12 +289,12 @@ archive_files() {
 
 @test "drops archives (.tar.gz/.tgz/.tar) so a prior backup isn't swallowed" {
     mkdir -p "$SRC/proj/src"
-    echo x >"$SRC/host-tag-2026-01-01-00-00-00.tar.gz"
+    echo x >"$SRC/lifeboat-host-2026-01-01-00-00-00.tar.gz"
     echo x >"$SRC/proj/old-backup.tgz"
     echo x >"$SRC/proj/bundle.tar"
     echo x >"$SRC/proj/src/real.py"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -300,7 +310,7 @@ archive_files() {
     echo obj >"$SRC/wt/w1/build/o.o"
     echo ext >"$SRC/wt/w1/.torch_ext/ext.so"
 
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -315,7 +325,7 @@ archive_files() {
     echo keep >"$SRC/keep.txt"
     echo drop >"$SRC/secret.pdf"
 
-    run env SRC="$SRC" EXTRA_EXCLUDES='*.pdf' "$LIFEBOAT" host tag
+    run env SRC="$SRC" EXTRA_EXCLUDES='*.pdf' "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     run archive_files
@@ -326,7 +336,7 @@ archive_files() {
 @test "DRY_RUN writes no archive but lists members" {
     echo hi >"$SRC/file.txt"
 
-    run env SRC="$SRC" DRY_RUN=1 "$LIFEBOAT" host tag
+    run env SRC="$SRC" DRY_RUN=1 "$LIFEBOAT" host
     [ "$status" -eq 0 ]
     [[ "$output" == *"file.txt"* ]]
 
@@ -340,7 +350,7 @@ archive_files() {
 @test "does not archive its own output when writing inside SRC" {
     echo hi >"$SRC/file.txt"
 
-    run env SRC="$SRC" OUT_DIR="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" OUT_DIR="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
 
     local tgz
@@ -356,7 +366,7 @@ archive_files() {
 
 @test "produces a valid, non-empty gzip archive" {
     echo hi >"$SRC/file.txt"
-    run env SRC="$SRC" "$LIFEBOAT" host tag
+    run env SRC="$SRC" "$LIFEBOAT" host
     [ "$status" -eq 0 ]
     local tgz
     tgz="$(find "$OUT" -name '*.tar.gz')"
