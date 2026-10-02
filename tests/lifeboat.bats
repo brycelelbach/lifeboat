@@ -50,6 +50,9 @@ archive_files() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"lifeboat <name>"* ]]
     [[ "$output" == *"brev-<env-name>-<env-8char-id>"* ]]
+    [[ "$output" == *"display name shown in Brev"* ]]
+    [[ "$output" == *"eval-inst-..."* ]]
+    [[ "$output" == *"do not guess"* ]]
     [[ "$output" != *"<tag>"* ]]
     [[ "$output" != *"set -u"* ]]
 }
