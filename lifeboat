@@ -19,7 +19,10 @@
 #
 # Brev convention:
 #   lifeboat brev-<env-name>-<env-8char-id>
-#   (<env-8char-id> is the first eight characters of the environment ID)
+#   <env-name> is the display name shown in Brev, not a provider VM name.
+#   <env-8char-id> is the first eight characters of BREV_ENV_ID.
+#   Never substitute cloud metadata (such as eval-inst-...) or the hostname.
+#   If the display name is unavailable locally, look it up; do not guess.
 #
 # Environment overrides:
 #   SRC=<dir>      directory to back up           (default: $HOME)

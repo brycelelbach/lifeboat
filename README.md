@@ -34,11 +34,23 @@ Size: 20G
 ```
 
 For a Brev environment, use the name
-`brev-<env-name>-<env-8char-id>`, where `<env-8char-id>` is the first eight
-characters of the environment ID. For example:
+`brev-<env-name>-<env-8char-id>`, where:
 
-```sh
-lifeboat brev-training-cluster-a1b2c3d4
+- `<env-name>` is the environment display name shown in Brev.
+- `<env-8char-id>` is the first eight characters of `BREV_ENV_ID`.
+
+Do not derive either value from cloud-provider metadata or the hostname. A
+provider VM name such as `eval-inst-...` is not the Brev environment name, and
+a hostname such as `brev-...` may contain the full environment ID. If the Brev
+display name is not available on the node, look it up in the Brev console or
+with the Brev CLI rather than guessing.
+
+For example, given the Brev display name `training-cluster`:
+
+```bash
+env_name=training-cluster
+env_id=${BREV_ENV_ID:?BREV_ENV_ID is not set}
+lifeboat "brev-${env_name}-${env_id:0:8}"
 ```
 
 This produces an archive named like
